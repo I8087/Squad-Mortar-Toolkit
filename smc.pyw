@@ -315,5 +315,5 @@ class Application(tk.Frame):
 
 root = tk.Tk()
 app = Application(master=root)
-app.master.title("Squad Stationary Mortar Calculator")
+app.master.title("Squad Mortar Toolkit - Standalone Mortar Calculator")
 app.mainloop()

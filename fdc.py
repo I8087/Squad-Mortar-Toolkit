@@ -625,5 +625,5 @@ class Application(tk.Frame):
 
 root = tk.Tk()
 app = Application(master=root)
-app.master.title("Squad FDC")
+app.master.title("Squad Mortar Toolkit - Fire Direction Center")
 app.mainloop()
