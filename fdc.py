@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.font import *
 
+from smt_lib import *
+
 class Application(tk.Frame):
 
     # Initialization function for the program.
@@ -41,277 +43,20 @@ class Application(tk.Frame):
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fixes blurry font.
 
-
-        # Squad mortar range card.
-        # (range, mils, TOF)
-        # NOTE: TOF is based on the average time of flight for three HE rounds.
-        #       Any zeros means that no test have been conducted for that range.
-        self.range_card = ((50, 1579, 22.6),
-                           (100, 1558, 22.7),
-                           (150, 1538, 22.7),
-                           (200, 1517, 22.6),
-                           (250, 1496, 22.6),
-                           (300, 1475, 22.6),
-                           (350, 1453, 22.5),
-                           (400, 1431, 22.5),
-                           (450, 1409, 22.4),
-                           (500, 1387, 0),
-                           (550, 1364, 0),
-                           (600, 1341, 0),
-                           (650, 1317, 0),
-                           (700, 1292, 0),
-                           (750, 1267, 0),
-                           (800, 1240, 0),
-                           (850, 1212, 0),
-                           (900, 1183, 0),
-                           (950, 1152, 0),
-                           (1000, 1118, 0),
-                           (1050, 1081, 0),
-                           (1100, 1039, 0),
-                           (1150, 988, 0),
-                           (1200, 918, 17.9),
-                           (1250, 800, 16.2))
-
-        self.min_range = 50
-        self.max_range = 1250
-
-    def grid_to_vec(self, grid):
-        """Takes a Squad grid and converts it into a vector point."""
-
-        x = 0
-        y = 0
-
-        grid = grid.split("-")
-        if len(grid) < 1 :
-            print("Error!")
-            exit(-1)
-
-        d = 300
-
-        for i in range(len(grid)):
-
-            # Grid zone designators.
-            if i == 0:
-                x = (ord(grid[0][0].upper())-65)*300
-                y = (int(grid[0][1:])-1)*-300
-                continue
-
-            d /= 3
-
-            if grid[i] in ("4", "5", "6"):
-                y -= d
-
-            if grid[i] in ("1", "2", "3"):
-                y -= 2*d
-
-            if grid[i] in ("2", "5", "8"):
-                x += d
-
-            if grid[i] in ("3", "6", "9"):
-                x += 2*d
-
-            return (x, y)
-
-    def vec_to_grid(self, cords):
-        """Takes a vector point and converts it into a Squad grid."""
-
-        grid = ""
-
-        # For a more accurate conversion, round to the thousands place.
-        x = round(cords[0], 3)
-        y = abs(round(cords[1], 3))
-
-        d = 300
-
-        grid += chr(65+int(x//d))
-        x -= (x//d)*d
-
-        grid += "{:.0f}".format(y//d+1)
-        y -= (y//d)*d
-
-        while x > 1 or y > 1:
-            d /= 3
-            g = 55
-
-            while x >= d:
-                    x -= d
-                    g += 1
-
-            while y >= d:
-                    y -= d
-                    g -= 3
-
-
-            grid += "-{}".format(chr(g))
-
-        return grid
-
-    def get_rn(self, gun, tgt, offset=False):
-        """Gets the range between the gun and target."""
-
-        if offset:
-            tgt_grid = tgt
-        else:
-            tgt_grid = self.mission_list[tgt]["GRID"]
-
-        rn = math.dist(self.grid_to_vec(self.guns[gun]["GRID"]),
-                       self.grid_to_vec(tgt_grid))
-
-        return round(rn)
-
-    def get_az(self, gun, tgt, offset=False):
-        """Gets the azimuth between the gun and target."""
-
-        g = self.grid_to_vec(self.guns[gun]["GRID"])
-
-        if offset:
-            t = self.grid_to_vec(tgt)
-        else:
-            t = self.grid_to_vec(self.mission_list[tgt]["GRID"])
-
-        az = math.atan2(t[0]-g[0], t[1]-g[1])
-        az = math.degrees(az)
-        if az < 0:
-            az += 360
-
-        return round(az)
-
-    def get_el(self, gun, tgt, rn):
-        """Gets the elevation of the gun based on the range."""
-
-        el = 0
-
-        if self.min_range <= rn <= self.max_range:
-            # Try and find exact elevation.
-            for i in self.range_card:
-                if rn == i[0]:
-                    el = i[1]
-                    continue
-
-            # Interpolate
-            if not el:
-                for i in range(len(self.range_card)):
-                    if self.range_card[i][0] < rn < self.range_card[i][0]+50:
-                        e = (self.range_card[i+1][1] - self.range_card[i][1])/50
-                        r = abs(self.range_card[i][0] - rn)
-                        el = round(self.range_card[i][1]+e*r)
-                        continue
-
-        else:
-            el = "----"
-
-        return el
-
-    # Direction in cardinal degrees, range in meters, and vector
-    # coordinates of current.
-    def aimpoint_offset(self, di, rn, grid):
-        """Calculates a new location based on direction and distance."""
-
-        cords = self.grid_to_vec(grid)
-
-        if not 0 <= di <= 360:
-            print("aimpoint_offset: Invalid direction!")
-            return
-
-        if 0 <= di <= 90:
-            x_neg = False
-            y_neg = False
-            x = (di/45)
-            y = 2 - x
-        elif 91 <= di <= 179:
-            di -= 90
-            x_neg = False
-            y_neg = True
-            y = (di/45)
-            x = 2 - y
-        elif 180 <= di <= 270:
-            di -= 180
-            x_neg = True
-            y_neg = True
-            x = (di/45)
-            y = 2 - x
-        elif 271 <= di <= 360:
-            di -= 270
-            x_neg = True
-            y_neg = False
-            y = (di/45)
-            x = 2 - y
-
-        x, y = math.sqrt(rn**2/2*x), math.sqrt(rn**2/2*y)
-
-        if round(rn) != round(math.sqrt(x**2+y**2)):
-            print("critical aimpoint_offset error!")
-            return
-
-        if x_neg:
-            x *= -1
-
-        if y_neg:
-            y *= -1
-
-        return self.vec_to_grid((cords[0]+x, cords[1]+y))
-
-    def correction_offset(self, grid, di, dev_cor="0", rn_cor="0"):
-        """Calculates grid corrections and adjustments based on the observer's azimuth."""
-
-        # Try to do a deviation correction.
-        if dev_cor != "0":
-            temp_di = di
-            if dev_cor[0] == "R":
-                temp_di += 90
-            elif dev_cor[0] == "L":
-                temp_di += 270
-            else:
-                print("ERROR!")
-                return
-
-            # Make sure we stay within an actual azimuth.
-            if temp_di >= 360:
-                    temp_di -= 360
-
-            print(temp_di)
-            grid = self.aimpoint_offset(temp_di, int(dev_cor[1:]), grid)
-
-        # Try to do a range correction.
-        if rn_cor != "0":
-            temp_di = di
-            if rn_cor[0] == "+":
-                pass
-            elif rn_cor[0] == "-":
-                temp_di += 180
-            else:
-                print("ERROR!")
-                return
-
-            # Make sure we stay within an actual azimuth.
-            if temp_di >= 360:
-                    temp_di -= 360
-
-            print(temp_di)
-            grid = self.aimpoint_offset(temp_di, int(rn_cor[1:]), grid)
-
-        return grid
-
     # Calc the gun data.
     def calc(self, gun, tgt, offset):
         """Calculates a gun's firing data."""
 
-        rn = 0
-
         # Calculate for a sheath.
         if offset != -1:
-            new_tgt = self.aimpoint_offset(offset, 10, self.mission_list[tgt]["GRID"])
-            rn = self.get_rn(gun, new_tgt, offset=True)
-            az = self.get_az(gun, new_tgt, offset=True)
+            new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], offset, 10)
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt)
 
-        if not self.min_range <= rn <= self.max_range:
-            rn = self.get_rn(gun, tgt)
-            az = self.get_az(gun, tgt)
+        else:
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"],
+                                        self.mission_list[tgt]["GRID"])
 
-        # Only the range matters in elevation.
-        el = self.get_el(gun, tgt, rn)
-
-        return (rn, az, el)
+        return (rn, az, el, tof)
 
     def update(self):
         """The program's main thread for multitasking, including target clean up, gui updates, and networking."""
@@ -514,9 +259,7 @@ class Application(tk.Frame):
 
                 # Make sure the guns are mission capable.
                 guns = [x for x in self.guns if self.guns[x]["CAPABLE"] == "YES"]
-                guns = [x for x in guns if self.min_range <= self.get_rn(x, i) <= self.max_range]
-                print("guns -> {}" % guns)
-
+                guns = [x for x in guns if getMin() <= get_rn(self.guns[x]["GRID"], self.mission_list[i]["GRID"]) <= getMax()]
                 if len(guns) >= int(self.mission_list[i]["GUNS"]):
                     self.mission_list[i]["STATUS"] = "SENDING"
                     guns = guns[:int(self.mission_list[i]["GUNS"])]
@@ -557,10 +300,10 @@ class Application(tk.Frame):
         if not rn_cor:
             rn_cor = "0"
 
-        self.mission_list[tgt]["GRID"] = self.correction_offset(self.mission_list[tgt]["GRID"],
-                                                                int(self.dir_cor.get()),
-                                                                dev_cor,
-                                                                rn_cor)
+        self.mission_list[tgt]["GRID"] = correction_offset(self.mission_list[tgt]["GRID"],
+                                                           int(self.dir_cor.get()),
+                                                           dev_cor,
+                                                           rn_cor)
 
 
         for i in self.mission_list[tgt]["GUN_LIST"]:
@@ -655,7 +398,8 @@ class Application(tk.Frame):
                                    "STATUS": self.mission_list[tgt]["STATUS"],
                                    "RANGE": data[0],
                                    "AZIMUTH":data[1],
-                                   "ELEVATION": data[2]}
+                                   "ELEVATION": data[2],
+                                   "TOF": data[3]}
                                    )
 
 

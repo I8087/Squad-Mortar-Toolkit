@@ -11,6 +11,9 @@ __all__ = [
     "InvalidAzimuthError",
     "InvalidCorrectionError",
     "InvalidGridError",
+    "getCard",
+    "getMax",
+    "getMin",
     "get_az",
     "get_el",
     "get_rn",
@@ -107,6 +110,19 @@ class OutOfRangeError(SMTLIB_Error):
         return "Out of range for mortar: {}m".format(self.rn)
 
 ################################
+# VARIABLE FUNCTIONS
+################################
+
+def getMin():
+    return min_range
+
+def getMax():
+    return max_range
+
+def getCard():
+    return range_card
+
+################################
 # GRID FUNCTIONS
 ################################
 
@@ -183,7 +199,7 @@ def grid_to_vec(grid):
 
     return (x, y)
 
-def vec_to_grid(self, cords):
+def vec_to_grid(cords):
     """Takes a vector point and converts it into a Squad grid."""
 
     grid = ""
@@ -266,9 +282,9 @@ def aimpoint_offset(grid, di, rn):
         y *= -1
 
     # Return the new location as a grid.
-    return self.vec_to_grid((cords[0]+x, cords[1]+y))
+    return vec_to_grid((cords[0]+x, cords[1]+y))
 
-def correction_offset(self, grid, di, dev_cor="0", rn_cor="0"):
+def correction_offset(grid, di, dev_cor="0", rn_cor="0"):
     """Adjusts a grid based on the observer's azimuth and corrections."""
 
     # Try to do a deviation correction.
@@ -285,7 +301,7 @@ def correction_offset(self, grid, di, dev_cor="0", rn_cor="0"):
         if temp_di >= 360:
                 temp_di -= 360
 
-        grid = self.aimpoint_offset(grid, temp_di, int(dev_cor[1:]))
+        grid = aimpoint_offset(grid, temp_di, int(dev_cor[1:]))
 
     # Try to do a range correction.
     if rn_cor != "0":
@@ -301,7 +317,7 @@ def correction_offset(self, grid, di, dev_cor="0", rn_cor="0"):
         if temp_di >= 360:
                 temp_di -= 360
 
-        grid = self.aimpoint_offset(grid, temp_di, int(rn_cor[1:]))
+        grid = aimpoint_offset(grid, temp_di, int(rn_cor[1:]))
 
     return grid
 
