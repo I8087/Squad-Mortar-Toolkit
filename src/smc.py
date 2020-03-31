@@ -2,12 +2,16 @@ import sys
 import math
 import tkinter as tk
 from tkinter.font import *
+import keyboard
 
 class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
-        self.master = master  
+        self.master = master
         self.pack()
+
+        keyboard.add_hotkey("ctrl+left alt", self.onCall)
+        
         self.create_widgets()
 
         # Only run if we're on Windows.
@@ -237,6 +241,17 @@ class Application(tk.Frame):
 
         # Get the TOF in seconds.
         self.get_tof(pos1, pos2, rn)
+
+    def onCall(self):
+        #print(root.state())
+        
+        #if root.state() == "withdrawn":
+        self.master.update()
+        self.master.deiconify()
+        self.master.attributes('-topmost', True)
+        #else:
+        #    self.master.withdraw()
+        #   self.master.update()
 
     def create_widgets(self):
         # Configure the font.
