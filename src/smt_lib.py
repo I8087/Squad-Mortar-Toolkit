@@ -2,7 +2,7 @@
 
 import math
 
-__version__ = "1.0"
+__version__ = "1.1b"
 
 __all__ = [
     "aimpoint_offset",
@@ -247,39 +247,9 @@ def aimpoint_offset(grid, di, rn):
     if not 0 <= di <= 360:
         raise InvalidAzimuthError(di)
 
-    # Find the quadrant we're working in.
-    if 0 <= di <= 90:
-        x_neg = False
-        y_neg = False
-        x = (di/45)
-        y = 2 - x
-    elif 91 <= di <= 179:
-        di -= 90
-        x_neg = False
-        y_neg = True
-        y = (di/45)
-        x = 2 - y
-    elif 180 <= di <= 270:
-        di -= 180
-        x_neg = True
-        y_neg = True
-        x = (di/45)
-        y = 2 - x
-    elif 271 <= di <= 360:
-        di -= 270
-        x_neg = True
-        y_neg = False
-        y = (di/45)
-        x = 2 - y
-
-    # Find the correction lengths of x and y.
-    x, y = math.sqrt(rn**2/2*x), math.sqrt(rn**2/2*y)
-
-    if x_neg:
-        x *= -1
-
-    if y_neg:
-        y *= -1
+    # Find our coordinates with some trigonometry.
+    y = math.cos(math.radians(di))*rn
+    x = math.sin(math.radians(di))*rn
 
     # Return the new location as a grid.
     return vec_to_grid((cords[0]+x, cords[1]+y))
