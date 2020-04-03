@@ -8,7 +8,7 @@ The Squad Mortar Toolkit is a collection of programs for calculating accurate mo
 * **Fire Direction Center (FDC)** - This program acts like the server to the MC. Has great control over missions, including multi-gun missions, sheath distributions, and corrections. Only one person will need to operate this program, but will need each mortarman to connect via MC.
 
 # Releases
-Currently, releases are built for win32.
+Currently, releases are built for win32 and can be found [here](https://github.com/I8087/Squad-Mortar-Toolkit/releases).
 
 # Mortar Terminology
 **NOTE: These are terms and definitions based on gunnery**
