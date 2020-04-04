@@ -22,6 +22,7 @@ __all__ = [
     "get_rn",
     "get_tof",
     "grid_to_vec",
+    "half_round",
     "OutOfRangeError",
     "ShellError",
     "SMTLIB_Error",
@@ -152,6 +153,20 @@ def getBurst(shell):
         return smk_burst
     else:
         raise ShellError(shell)
+
+################################
+# MISC FUNCTIONS
+################################
+
+def half_round(num):
+    """Rounds to the nearest whole number, unless the tenths place is half."""
+
+    num = round(num, 1)
+
+    if num % 1 != .5:
+        num = round(num)
+
+    return num
 
 ################################
 # GRID FUNCTIONS
@@ -391,7 +406,7 @@ def get_az(grid1, grid2, center=False):
     az = math.degrees(az)
 
     # Lose of precision due to rounding, might remove later.
-    az = round(az)
+    az = half_round(az)
 
     # Turn a negative angle into a positive one.
     if az < 0:
@@ -421,7 +436,7 @@ def get_el(gun, tgt, center=False):
         # Interpolate if the range isn't exact.
         e = (range_card[rn50+1][1] - range_card[rn50][1])/50
         r = abs(range_card[rn50][0] - rn)
-        return round(range_card[rn50][1]+e*r)
+        return half_round(range_card[rn50][1]+e*r)
 
     # At this point we were unable to calculate for elevation.
     raise OutOfRangeError(rn)
