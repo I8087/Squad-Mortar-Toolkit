@@ -72,8 +72,6 @@ class Application(tk.Frame):
         gun = "{}-{}-{}-{}-{}".format(gg1, gg2, gg3, gg4, gg5)
         tgt = "{}-{}-{}-{}-{}".format(tg1, tg2, tg3, tg4, tg5)
 
-        print(self.centered.get())
-
         # Calculate the firing data.
         try:
             rn, az, el, tof = calc_data(gun, tgt, center=self.centered.get())
