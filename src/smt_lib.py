@@ -370,19 +370,19 @@ def correction_offset(grid, di, dev_cor="0", rn_cor="0"):
 # MORTAR FUNCTIONS
 ################################
 
-def get_rn(grid1, grid2):
+def get_rn(grid1, grid2, center=False):
     """Returns the range between two grids."""
 
     # Lose of precision due to rounding, might remove later.
-    return round(math.dist(grid_to_vec(grid1),
-                           grid_to_vec(grid2)))
+    return round(math.dist(grid_to_vec(grid1, center=center),
+                           grid_to_vec(grid2, center=center)))
 
-def get_az(grid1, grid2):
+def get_az(grid1, grid2, center=False):
     """Returns the azimuth between two grids."""
 
     # Turn both grids into vector points.
-    g = grid_to_vec(grid1)
-    t = grid_to_vec(grid2)
+    g = grid_to_vec(grid1, center=center)
+    t = grid_to_vec(grid2, center=center)
 
     # Get the angle of the tangent in radians.
     az = math.atan2(t[0]-g[0], t[1]-g[1])
@@ -403,12 +403,12 @@ def get_az(grid1, grid2):
 
     return az
 
-def get_el(gun, tgt):
+def get_el(gun, tgt, center=False):
     """Gets the elevation of the gun based on the gun and target grids."""
 
     # Get the range between the gun and target.
     # Range is needed for determining elevation.
-    rn = get_rn(gun, tgt)
+    rn = get_rn(gun, tgt, center=center)
     rn50 = rn//50-1
 
     # Make sure the target is within range.
@@ -426,12 +426,12 @@ def get_el(gun, tgt):
     # At this point we were unable to calculate for elevation.
     raise OutOfRangeError(rn)
 
-def get_tof(gun, tgt):
+def get_tof(gun, tgt, center=False):
     """Gets the time of flight of the round based on the gun and target grids."""
 
     # Get the range between the gun and target.
     # Range is needed for determining time of flight.
-    rn = get_rn(gun, tgt)
+    rn = get_rn(gun, tgt, center=center)
     rn50 = rn//50-1
 
     # Make sure the target is within range.
@@ -449,15 +449,15 @@ def get_tof(gun, tgt):
     # At this point we were unable to calculate for time of flight.
     raise OutOfRangeError(rn)
 
-def calc_data(gun, tgt):
+def calc_data(gun, tgt, center=False):
     """Takes two grids, a gun and target, and returns a tuple of firing data.
        (range, azimuth, elevation, time of flight)
     """
 
     # Calculate the firing data.
-    rn = get_rn(gun, tgt)
-    az = get_az(gun, tgt)
-    el = get_el(gun, tgt)
-    tof = get_tof(gun, tgt)
+    rn = get_rn(gun, tgt, center=center)
+    az = get_az(gun, tgt, center=center)
+    el = get_el(gun, tgt, center=center)
+    tof = get_tof(gun, tgt, center=center)
 
     return (rn, az, el, tof)

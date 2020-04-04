@@ -1,8 +1,11 @@
 import sys
 import math
 import tkinter as tk
+from tkinter import *
 from tkinter.font import *
 import keyboard
+
+from smt_lib import *
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -11,6 +14,8 @@ class Application(tk.Frame):
         self.pack()
 
         keyboard.add_hotkey("ctrl+left alt", self.onCall)
+
+        self.centered = BooleanVar()
         
         self.create_widgets()
 
@@ -18,166 +23,6 @@ class Application(tk.Frame):
         if sys.platform == "win32":
             import ctypes
             ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fixes blurry font.
-
-        # Squad mortar range card with TOF.
-        # (range, mils, TOF)
-        self.range_card = ((50, 1579, 22.6),
-                           (100, 1558, 22.7),
-                           (150, 1538, 22.7),
-                           (200, 1517, 22.6),
-                           (250, 1496, 22.6),
-                           (300, 1475, 22.6),
-                           (350, 1453, 22.5),
-                           (400, 1431, 22.5),
-                           (450, 1409, 22.4),
-                           (500, 1387, 0),
-                           (550, 1364, 0),
-                           (600, 1341, 0),
-                           (650, 1317, 0),
-                           (700, 1292, 0),
-                           (750, 1267, 0),
-                           (800, 1240, 0),
-                           (850, 1212, 0),
-                           (900, 1183, 0),
-                           (950, 1152, 0),
-                           (1000, 1118, 0),
-                           (1050, 1081, 0),
-                           (1100, 1039, 0),
-                           (1150, 988, 0),
-                           (1200, 918, 17.9),
-                           (1250, 800, 16.2))
-
-        self.min_range = 50
-        self.max_range = 1250
-
-    def grid_to_vec(self, grid):
-        x = 0
-        y = 0
-        grid = grid.split("-")
-        if len(grid) < 2 :
-            print("Error!")
-            exit(-1)
-
-        if not grid[0][0].isalpha():
-            exit(-1)
-
-        if not grid[0][1:].isdigit():
-            exit(-1)
-
-        if not grid[1].isdigit():
-            exit(-1)
-
-        if not grid[2].isdigit():
-            exit(-1)
-
-
-        d = 300
-
-        for i in range(len(grid)):
-
-            # Grid zone designators.
-            if i == 0:
-                x = (ord(grid[0][0].lower())-65)*300
-                y = (int(grid[0][1:])-1)*-300
-                continue
-
-            d /= 3
-
-            if grid[i] in ("4", "5", "6"):
-                y -= d
-
-            if grid[i] in ("1", "2", "3"):
-                y -= 2*d
-
-            if grid[i] in ("2", "5", "8"):
-                x += d
-
-            if grid[i] in ("3", "6", "9"):
-                x += 2*d
-
-        return (x, y)
-
-    def get_rn(self, pos1, pos2):
-        rn = math.dist(pos1, pos2)
-        rn = round(rn)
-
-        self.rn1["state"] = "normal"
-        self.rn1.delete(0, tk.END)
-        self.rn1.insert(0, rn)
-        self.rn1["state"] = "disabled"
-        return rn
-
-    def get_az(self, pos1, pos2):
-        az = math.atan2(pos2[0]-pos1[0], pos2[1]-pos1[1])
-        az = math.degrees(az)
-        if az < 0:
-            az += 360
-        az = round(az)
-
-        self.az1["state"] = "normal"
-        self.az1.delete(0, tk.END)
-        self.az1.insert(0, az)
-        self.az1["state"] = "disabled"
-        return az
-
-    def get_el(self, pos1, pos2, rn):
-        el = 0
-        if self.min_range <= rn <= self.max_range:
-            # Try and find exact elevation.
-            for i in self.range_card:
-                if rn == i[0]:
-                    el = i[1]
-                    continue
-
-            # Interpolate
-            if not el:
-                for i in range(len(self.range_card)):
-                    if self.range_card[i][0] < rn < self.range_card[i][0]+50:
-                        e = (self.range_card[i+1][1] - self.range_card[i][1])/50
-                        r = abs(self.range_card[i][0] - rn)
-                        el = round(self.range_card[i][1]+e*r)
-                        continue
-                
-        else:
-            el = "----"
-
-
-        self.el1["state"] = "normal"
-        self.el1.delete(0, tk.END)
-        self.el1.insert(0, el)
-        self.el1["state"] = "disabled"
-        return el
-
-    def get_tof(self, pos1, pos2, rn):
-        tof = 0
-
-        if self.min_range <= rn <= self.max_range:
-            # Try and find exact elevation.
-            for i in self.range_card:
-                if rn == i[0]:
-                    tof = i[2]
-                    continue
-
-            # Interpolate
-            if not tof:
-                for i in range(len(self.range_card)):
-                    if self.range_card[i][0] < rn < self.range_card[i][0]+50:
-                        t = (self.range_card[i+1][2] - self.range_card[i][2])/50
-                        r = abs(self.range_card[i][0] - rn)
-                        tof = round(self.range_card[i][2]+t*r)
-                        continue
-                
-        else:
-            tof = "----"
-
-
-        self.tof1["state"] = "normal"
-        self.tof1.delete(0, tk.END)
-        self.tof1.insert(0, tof)
-        self.tof1["state"] = "disabled"
-
-        return tof
-
 
     def calc(self):
 
@@ -223,24 +68,40 @@ class Application(tk.Frame):
         if not tg5:
             tg5 = "7"
 
+        # Format the grids.
         gun = "{}-{}-{}-{}-{}".format(gg1, gg2, gg3, gg4, gg5)
         tgt = "{}-{}-{}-{}-{}".format(tg1, tg2, tg3, tg4, tg5)
 
-        #cords
-        pos1 = self.grid_to_vec(gun)
-        pos2 = self.grid_to_vec(tgt)
+        print(self.centered.get())
 
-        # Get the distance of the target from the gun.
-        rn = self.get_rn(pos1, pos2)
+        # Calculate the firing data.
+        try:
+            rn, az, el, tof = calc_data(gun, tgt, center=self.centered.get())
+        except OutOfRangeError as e:
+            rn = get_rn(gun, tgt, center=self.centered)
+            az = get_az(gun, tgt, center=self.centered)
+            el = "- - - -"
+            tof = "- - - -"
 
-        # Get the azimuth of the target in degrees.
-        self.get_az(pos1, pos2)
+        self.rn1["state"] = "normal"
+        self.rn1.delete(0, tk.END)
+        self.rn1.insert(0, rn)
+        self.rn1["state"] = "disabled"
 
-        # Get the elevation in mils.
-        self.get_el(pos1, pos2, rn)
+        self.az1["state"] = "normal"
+        self.az1.delete(0, tk.END)
+        self.az1.insert(0, az)
+        self.az1["state"] = "disabled"
 
-        # Get the TOF in seconds.
-        self.get_tof(pos1, pos2, rn)
+        self.el1["state"] = "normal"
+        self.el1.delete(0, tk.END)
+        self.el1.insert(0, el)
+        self.el1["state"] = "disabled"
+
+        self.tof1["state"] = "normal"
+        self.tof1.delete(0, tk.END)
+        self.tof1.insert(0, tof)
+        self.tof1["state"] = "disabled"
 
     def onCall(self):
         #print(root.state())
@@ -299,6 +160,10 @@ class Application(tk.Frame):
         self.lb11.grid(row=1, column=8)
         self.tg5 = tk.Entry(self, width=1, font=font)
         self.tg5.grid(row=1, column=9)
+
+        self.centerbox = Checkbutton(self, text="CENTER GRID", variable=self.centered,
+                                     onvalue=True, offvalue=False)
+        self.centerbox.grid(row=3, column=0)
 
         self.lb12 = tk.Label(self, text="RANGE: ", font=font)
         self.lb12.grid(row=0, column=11)
