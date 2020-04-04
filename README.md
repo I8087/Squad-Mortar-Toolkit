@@ -5,7 +5,7 @@ The Squad Mortar Toolkit is a collection of programs for calculating accurate mo
 
 * **Standalone Mortar Calculator (SMC)** - This is ideal if you're calculating data by yourself. You can control the gun data along with the target data.
 * **Mortar Calculator Software (MC)** - This is much like SMC, except that it acts as a client to the FDC and will require a team to operate. Missions are calculated and received from the FDC. Each mortarman in a battery will need to operate this program.
-* **Fire Direction Center (FDC)** - This program acts like the server to the MC. Has great control over missions, including multi-gun missions, sheath distributions, and corrections. Only one person will need to operate this program, but will need each mortarman to connect via MC.
+* **Fire Direction Center (FDC)** - This program acts like the server to the MC. Has great control over missions, including multi-gun missions, sheaf distributions, and corrections. Only one person will need to operate this program, but will need each mortarman to connect via MC.
 
 # Releases
 Currently, releases are built for win32 and can be found [here](https://github.com/I8087/Squad-Mortar-Toolkit/releases).
