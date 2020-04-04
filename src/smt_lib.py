@@ -11,6 +11,9 @@ __all__ = [
     "InvalidAzimuthError",
     "InvalidCorrectionError",
     "InvalidGridError",
+    "getBurst",
+    "getBurstHE",
+    "getBurstSMK",
     "getCard",
     "getMax",
     "getMin",
@@ -20,6 +23,7 @@ __all__ = [
     "get_tof",
     "grid_to_vec",
     "OutOfRangeError",
+    "ShellError",
     "SMTLIB_Error",
     "valid_grid",
     "vec_to_grid"
@@ -63,6 +67,10 @@ range_card = ((50, 1579, 22.6),
 # The minimum and maximum range for mortars in Squad.
 min_range = 50
 max_range = 1250
+
+# Burst area of a shell in meters.
+he_burst = 10
+smk_burst = 20
 
 ################################
 # LIBRARY EXCEPTIONS
@@ -109,6 +117,15 @@ class OutOfRangeError(SMTLIB_Error):
     def __str__(self):
         return "Out of range for mortar: {}m".format(self.rn)
 
+class ShellError(SMTLIB_Error):
+    """Exception for an unknown shell type."""
+
+    def __init__(self, shell):
+        self.shell = shell
+
+    def __str__(self):
+        return "Unknown shell type: \"{}\"".format(self.shell)
+
 ################################
 # VARIABLE FUNCTIONS
 ################################
@@ -121,6 +138,20 @@ def getMax():
 
 def getCard():
     return range_card
+
+def getBurstHE():
+    return he_burst
+
+def getBurstSMK():
+    return smk_burst
+
+def getBurst(shell):
+    if shell.upper() == "HE":
+        return he_burst
+    elif shell.upper() == "SMK":
+        return smk_burst
+    else:
+        raise ShellError(shell)
 
 ################################
 # GRID FUNCTIONS

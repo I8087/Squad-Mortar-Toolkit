@@ -44,17 +44,42 @@ class Application(tk.Frame):
             ctypes.windll.shcore.SetProcessDpiAwareness(1) # Fixes blurry font.
 
     # Calc the gun data.
-    def calc(self, gun, tgt, offset):
+    def calc(self, gun, tgt, sheaf="CONVERGED", shell="HE", number=1, total=1):
         """Calculates a gun's firing data."""
 
-        # Calculate for a sheath.
-        if offset != -1:
-            new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], offset, 10)
+        # Make sure not to shoot a sheaf if there's only one gun.
+        if total == 1:
+            sheaf = "CONVERGED"
+
+        # Calculate for a circle sheaf.
+        if sheaf == "CIRCLE":
+            new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], (total/360)*number, getBurst(shell))
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt)
+
+        # Calculate for a converged sheaf.
+        elif sheaf == "CONVERGED":
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"],
+                                        self.mission_list[tgt]["GRID"])
+
+        # Calculate for an open sheaf.
+        elif sheaf == "OPEN":
+
+
+            # Get the sheaf offset in meters.
+            sheaf_offset = (total*getBurst(shell)/2) - (getBurst(shell)/2) - (number*getBurst(shell))
+
+            # Get the direction of the sheaf, right of target
+            # if positive and left of target if negative.
+            if sheaf_offset > 0:
+                sheaf_dir = 90
+            else:
+                sheaf_dir = 270
+
+            new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], sheaf_dir, abs(sheaf_offset))
             rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt)
 
         else:
-            rn, az, el, tof = calc_data(self.guns[gun]["GRID"],
-                                        self.mission_list[tgt]["GRID"])
+            print("SHEAF ERROR!")
 
         return (rn, az, el, tof)
 
@@ -226,6 +251,7 @@ class Application(tk.Frame):
                                                 "GRID": self.tgt_grid.get(),
                                                 "GUNS": self.num_guns.get(),
                                                 "MOC": self.moc.get(),
+                                                "SHEAF": self.sheaf.get(),
                                                 "SHELL": self.shell.get(),
                                                 "ROUNDS": self.rnds.get(),
                                                 "STATUS": "WAITING",
@@ -233,7 +259,7 @@ class Application(tk.Frame):
                                                 "GUN_STATUS": {}}
 
         for i in (self.tgt_id, self.tgt_grid, self.num_guns, self.moc,
-                  self.shell, self.rnds):
+                  self.sheaf, self.shell, self.rnds):
             i.delete(0, tk.END)
 
         self.update_mission_list()
@@ -247,6 +273,7 @@ class Application(tk.Frame):
                 self.missions.insert("", "end", text=self.mission_list[i]["ID"], values=(self.mission_list[i]["GRID"],
                                                                                          self.mission_list[i]["GUNS"],
                                                                                          self.mission_list[i]["MOC"],
+                                                                                         self.mission_list[i]["SHEAF"],
                                                                                          self.mission_list[i]["SHELL"],
                                                                                          self.mission_list[i]["ROUNDS"],
                                                                                          self.mission_list[i]["STATUS"]))
@@ -268,17 +295,14 @@ class Application(tk.Frame):
                     # Calc a bcs sheath offset.
                     g_offset = 360/len(guns)
 
-                    # Don't use a sheath if there's only one gun!
+                    # Don't use a sheaf if there's only one gun!
                     if len(guns) == 1:
-                        g_offset = -1
+                        self.mission_list[i]["SHEAF"] = "CONVERGED"
 
                     for n in range(len(guns)):
-                        if g_offset == -1:
-                            r = self.calc(guns[n], i, -1)
-                        else:
-                            r = self.calc(guns[n], i, g_offset*n)
+                        data = self.calc(guns[n], i, sheaf=self.mission_list[i]["SHEAF"], shell=self.mission_list[i]["SHELL"], number=n, total=len(guns))
 
-                        self.queue_mission(guns[n], i, r)
+                        self.queue_mission(guns[n], i, data)
                         self.guns[guns[n]]["CAPABLE"] = "NO"
                         self.mission_list[i]["GUN_STATUS"][guns[n]] = "SENDING"
                     self.update_mission_list()
@@ -359,6 +383,10 @@ class Application(tk.Frame):
         self.moc2.delete(0, tk.END)
         self.moc2["state"] = "disabled"
 
+        self.sheaf2["state"] = "normal"
+        self.sheaf2.delete(0, tk.END)
+        self.sheaf2["state"] = "disabled"
+
         self.shell2["state"] = "normal"
         self.shell2.delete(0, tk.END)
         self.shell2["state"] = "disabled"
@@ -430,6 +458,12 @@ class Application(tk.Frame):
         self.moc2.insert(0, self.mission_list[tgt]["MOC"])
         self.moc2["state"] = "disabled"
 
+        self.sheaf2["state"] = "normal"
+        self.sheaf2.delete(0, tk.END)
+        self.sheaf2.insert(0, self.mission_list[tgt]["SHEAF"])
+        self.sheaf2["state"] = "disabled"
+
+
         self.shell2["state"] = "normal"
         self.shell2.delete(0, tk.END)
         self.shell2.insert(0, self.mission_list[tgt]["SHELL"])
@@ -493,21 +527,31 @@ class Application(tk.Frame):
         self.lb4.grid(row=4, column=2)
 
         self.moc = ttk.Combobox(self, state="readonly",
-                                width=10, font=font,
+                                width=18, font=font,
                                 values=("WR",
                                         "DNL",
                                         "AMC"))
         self.moc.grid(row=4, column=3)
 
-        self.lb4 = tk.Label(self, text="SHELL: ", font=font)
+        self.lb4 = tk.Label(self, text="SHEAF: ", font=font)
         self.lb4.grid(row=5, column=2)
-        self.shell = ttk.Combobox(self, state="readonly", width=10, font=font, values=("HE", "SMK"))
-        self.shell.grid(row=5, column=3)
+
+        self.sheaf = ttk.Combobox(self, state="readonly",
+                                  width=18, font=font,
+                                  values=("CIRCLE",
+                                          "CONVERGED",
+                                          "OPEN"))
+        self.sheaf.grid(row=5, column=3)
+
+        self.lb4 = tk.Label(self, text="SHELL: ", font=font)
+        self.lb4.grid(row=6, column=2)
+        self.shell = ttk.Combobox(self, state="readonly", width=18, font=font, values=("HE", "SMK"))
+        self.shell.grid(row=6, column=3)
 
         self.lb2 = tk.Label(self, text="ROUNDS: ", font=font)
-        self.lb2.grid(row=6, column=2)
+        self.lb2.grid(row=7, column=2)
         self.rnds = tk.Entry(self, width=20, font=font)
-        self.rnds.grid(row=6, column=3)
+        self.rnds.grid(row=7, column=3)
 
         self.lb4 = tk.Label(self, text="SELECTED MISSION", font=font)
         self.lb4.grid(row=0, column=5)
@@ -532,15 +576,20 @@ class Application(tk.Frame):
         self.moc2 = tk.Entry(self, width=20, font=font, state="disabled")
         self.moc2.grid(row=4, column=5)
 
-        self.lb4 = tk.Label(self, text="SHELL: ", font=font)
+        self.lb4 = tk.Label(self, text="SHEAF: ", font=font)
         self.lb4.grid(row=5, column=4)
+        self.sheaf2 = tk.Entry(self, width=20, font=font, state="disabled")
+        self.sheaf2.grid(row=5, column=5)
+
+        self.lb4 = tk.Label(self, text="SHELL: ", font=font)
+        self.lb4.grid(row=6, column=4)
         self.shell2 = tk.Entry(self, width=20, font=font, state="disabled")
-        self.shell2.grid(row=5, column=5)
+        self.shell2.grid(row=6, column=5)
 
         self.lb2 = tk.Label(self, text="ROUNDS: ", font=font)
-        self.lb2.grid(row=6, column=4)
+        self.lb2.grid(row=7, column=4)
         self.rnds2 = tk.Entry(self, width=20, font=font, state="disabled")
-        self.rnds2.grid(row=6, column=5)
+        self.rnds2.grid(row=7, column=5)
 
 
         self.lb4 = tk.Label(self, text="MISSION CORRECTIONS", font=font)
@@ -563,29 +612,29 @@ class Application(tk.Frame):
 
         self.process = tk.Button(self, text="GENERATE",
                               command=self.process, font=font)
-        self.process.grid(row=7, column=3)
+        self.process.grid(row=8, column=3)
 
 
         self.process = tk.Button(self, text="PROCESS",
                                  command=self.process, font=font)
-        self.process.grid(row=7, column=5)
+        self.process.grid(row=8, column=5)
 
         self.cor_button = tk.Button(self, text="CORRECT",
                                     command=self.correct,
                                     font=font, state="disabled")
-        self.cor_button.grid(row=7, column=7)
+        self.cor_button.grid(row=8, column=7)
 
         self.process = tk.Button(self, text="EOM",
                               command=self.eom, font=font)
-        self.process.grid(row=7, column=8)
+        self.process.grid(row=8, column=8)
 
         self.host = tk.Button(self, text="HOST",
                               command=self.host, font=font)
-        self.host.grid(row=7, column=9)
+        self.host.grid(row=8, column=9)
 
         self.quit = tk.Button(self, text="QUIT",
                               command=self.master.destroy, font=font)
-        self.quit.grid(row=7, column=10)
+        self.quit.grid(row=8, column=10)
 
         # Create the tree view.
         self.tree = ttk.Treeview(root, columns=("GRID", "AMMO", "STATUS", "CAPABLE", "MISSION"))
@@ -596,15 +645,23 @@ class Application(tk.Frame):
         self.tree.heading("CAPABLE", text="CAPABLE")
         self.tree.heading("MISSION", text="MISSION")
 
+        self.tree.column("#0", width=100)
+        self.tree.column("GRID", width=100)
+        self.tree.column("AMMO", width=100)
+        self.tree.column("STATUS", width=100)
+        self.tree.column("CAPABLE", width=100)
+        self.tree.column("MISSION", width=100)
+
         self.tree.pack(side="left")
 
 
         # Create the tree view.
-        self.missions = ttk.Treeview(root, columns=("GRID", "GUNS", "MOC", "SHELL", "ROUNDS", "STATUS"))
+        self.missions = ttk.Treeview(root, columns=("GRID", "GUNS", "MOC", "SHEAF", "SHELL", "ROUNDS", "STATUS"))
         self.missions.heading("#0", text="Target Number")
         self.missions.heading("GRID", text="GRID")
         self.missions.heading("GUNS", text="GUNS")
         self.missions.heading("MOC", text="MOC")
+        self.missions.heading("SHEAF", text="SHEAF")
         self.missions.heading("SHELL", text="SHELL")
         self.missions.heading("ROUNDS", text="ROUNDS")
         self.missions.heading("STATUS", text="STATUS")
@@ -612,6 +669,7 @@ class Application(tk.Frame):
         self.missions.column("GRID", width=100)
         self.missions.column("GUNS", width=100)
         self.missions.column("MOC", width=100)
+        self.missions.column("SHEAF", width=100)
         self.missions.column("SHELL", width=100)
         self.missions.column("ROUNDS", width=100)
         self.missions.column("STATUS", width=100)
