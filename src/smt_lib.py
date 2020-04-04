@@ -159,8 +159,12 @@ def valid_grid(grid):
 
     return True
 
-def grid_to_vec(grid):
-    """Converts a Squad grid into a vector point."""
+def grid_to_vec(grid, center=False):
+    """Converts a Squad grid into a vector point. Based on Northwest. """
+
+    # Wrap around if center is True.
+    if center:
+        return grid_to_vec_c(grid)
 
     x = 0
     y = 0
@@ -196,6 +200,46 @@ def grid_to_vec(grid):
 
         if grid[i] in ("3", "6", "9"):
             x += 2*d
+
+    return (x, y)
+
+def grid_to_vec_c(grid):
+    """Converts a Squad grid into a vector point, based on a center."""
+
+    x = 0
+    y = 0
+
+    # Make sure the grid is valid!
+    if not valid_grid(grid):
+        raise InvalidGridError(grid)
+
+    grid = grid.split("-")
+
+    # Distance adjuster in meters.
+    # Gets smaller as the grid gets more precise.
+    d = 150
+
+    for i in range(len(grid)):
+
+        # Grid zone designators.
+        if i == 0:
+            x = (ord(grid[0][0].upper())-ord("A"))*300+d
+            y = (int(grid[0][1:])-1)*-300-d
+            continue
+
+        d /= 3
+
+        if grid[i] in ("7", "8", "9"):
+            y += d
+
+        if grid[i] in ("1", "2", "3"):
+            y -= d
+
+        if grid[i] in ("1", "4", "7"):
+            x -= d
+
+        if grid[i] in ("3", "6", "9"):
+            x += d
 
     return (x, y)
 
