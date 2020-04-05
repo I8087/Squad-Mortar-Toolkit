@@ -3,7 +3,7 @@ import socket
 import pickle
 import math
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, BooleanVar
 from tkinter.font import *
 
 from smt_lib import *
@@ -15,6 +15,9 @@ class Application(tk.Frame):
         super().__init__(master)
         self.master = master
         self.pack()
+
+        self.centered = BooleanVar()
+        
         self.create_widgets()
 
 
@@ -54,12 +57,12 @@ class Application(tk.Frame):
         # Calculate for a circle sheaf.
         if sheaf == "CIRCLE":
             new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], (total/360)*number, getBurst(shell))
-            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt)
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt, center=self.centered)
 
         # Calculate for a converged sheaf.
         elif sheaf == "CONVERGED":
             rn, az, el, tof = calc_data(self.guns[gun]["GRID"],
-                                        self.mission_list[tgt]["GRID"])
+                                        self.mission_list[tgt]["GRID"], center=self.centered)
 
         # Calculate for an open sheaf.
         elif sheaf == "OPEN":
@@ -76,7 +79,7 @@ class Application(tk.Frame):
                 sheaf_dir = 270
 
             new_tgt = aimpoint_offset(self.mission_list[tgt]["GRID"], sheaf_dir, abs(sheaf_offset))
-            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt)
+            rn, az, el, tof = calc_data(self.guns[gun]["GRID"], new_tgt, center=self.centered)
 
         else:
             print("SHEAF ERROR!")
@@ -504,6 +507,10 @@ class Application(tk.Frame):
         self.lb2.grid(row=3, column=0)
         self.port_setting = tk.Entry(self, width=20, font=font)
         self.port_setting.grid(row=3, column=1)
+
+        self.centerbox = ttk.Checkbutton(self, text="CENTER GRID", variable=self.centered,
+                                     onvalue=True, offvalue=False)
+        self.centerbox.grid(row=4, column=1)
 
         self.lb4 = tk.Label(self, text="MISSION GENERATOR", font=font)
         self.lb4.grid(row=0, column=3)
