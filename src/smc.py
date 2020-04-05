@@ -34,18 +34,12 @@ class Application(tk.Frame):
         gg5 = self.gg5.get()
 
         # gg1 required.
+        gun = gg1
 
-        if not gg2:
-            gg2 = "7"
-
-        if not gg3:
-            gg3 = "7"
-
-        if not gg4:
-            gg4 = "7"
-
-        if not gg5:
-            gg5 = "7"
+        # Format the target grid.
+        for i in (gg2, gg3, gg4, gg5):
+            if i:
+                gun += "-{}".format(i)
 
         # Get tgt grid.
         tg1 = self.tg1.get()
@@ -55,22 +49,12 @@ class Application(tk.Frame):
         tg5 = self.tg5.get()
 
         # tg1 required.
+        tgt = tg1
 
-        if not tg2:
-            tg2 = "7"
-
-        if not tg3:
-            tg3 = "7"
-
-        if not tg4:
-            tg4 = "7"
-
-        if not tg5:
-            tg5 = "7"
-
-        # Format the grids.
-        gun = "{}-{}-{}-{}-{}".format(gg1, gg2, gg3, gg4, gg5)
-        tgt = "{}-{}-{}-{}-{}".format(tg1, tg2, tg3, tg4, tg5)
+        # Format the target grid.
+        for i in (tg2, tg3, tg4, tg5):
+            if i:
+                tgt += "-{}".format(i)
 
         # Calculate the firing data.
         try:
