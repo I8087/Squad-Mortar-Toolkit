@@ -2,7 +2,7 @@
 
 import math
 
-__version__ = "1.1b"
+__version__ = "1.1"
 
 __all__ = [
     "aimpoint_offset",
