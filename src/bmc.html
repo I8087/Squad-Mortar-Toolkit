@@ -1,3 +1,13 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Squad Mortar Toolkit - Browser Mortar Calculator</title>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.8.8/brython.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.8.8/brython_stdlib.js"></script>
+
+<script type="text/python" id="smt_lib">
 """A collection of functions and algorithms for calculating mortar data."""
 
 import math
@@ -248,6 +258,7 @@ def grid_to_vec(grid, center=False):
         x += d/2
         y -= d/2
 
+    # This fixes the bmc implimentation. Doesn't handle floats well.
     return (round(x), round(y))
 
 def vec_to_grid(cords):
@@ -348,10 +359,10 @@ def correction_offset(grid, di, dev_cor="0", rn_cor="0"):
 
 def get_rn(grid1, grid2, center=False):
     """Returns the range between two grids."""
-
     # Lose of precision due to rounding, might remove later.
-    return round(math.dist(grid_to_vec(grid1, center=center),
-                           grid_to_vec(grid2, center=center)))
+    return math.dist(grid_to_vec(grid1, center=center),
+                     grid_to_vec(grid2, center=center))
+
 
 def get_az(grid1, grid2, center=False):
     """Returns the azimuth between two grids."""
@@ -437,3 +448,82 @@ def calc_data(gun, tgt, center=False):
     tof = get_tof(gun, tgt, center=center)
 
     return (rn, az, el, tof)
+</script>
+
+</head>
+
+<body onload="brython()">
+    <script type="text/python">
+from browser import document, alert
+from smt_lib import *
+
+centered = False
+
+def doCalc(e):
+    gun = document["Gun"].value
+    tgt = document["Tgt"].value
+
+    #Calculate the firing data.
+    try:
+        rn, az, el, tof = calc_data(gun, tgt, center=centered)
+    except OutOfRangeError as e:
+        rn = get_rn(gun, tgt, center=centered)
+        az = get_az(gun, tgt, center=centered)
+        el = "- - - -"
+        tof = "- - - -"
+
+    except InvalidGridError as e:
+        alert("Invalid Grid!")
+        return
+
+    document["Range"].value = round(rn)
+    document["TOF"].value = tof
+    document["Azimuth"].value = az
+    document["Elevation"].value = el
+
+document["calc"].bind("click", doCalc)
+</script>
+
+<table>
+<tr>
+<td>GUN:</td>
+<td><input id="Gun"></td>
+<td>RANGE:</td>
+<td><input id="Range" disabled></td>
+</tr>
+
+<tr>
+<td>TARGET:</td>
+<td><input id="Tgt"</td>
+<td>TOF:</td>
+<td><input id="TOF" disabled></td>
+</tr>
+
+<tr>
+<td></td>
+<td></td>
+<td><p style="color: blue; margin: 0; padding: 0;">AZIMUTH:</p></td>
+<td><input id="Azimuth" disabled></td>
+</tr>
+
+<tr>
+<td></td>
+<td></td>
+<td><p style="color: red; margin: 0; padding: 0;">ELEVATION:</p></td>
+<td><input id="Elevation" disabled></td>
+</tr>
+
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td><button id="calc">CALC</button></td>
+</tr>
+
+</table>
+
+
+
+</body>
+
+</html>
